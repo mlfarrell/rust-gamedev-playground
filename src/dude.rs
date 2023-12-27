@@ -1,5 +1,4 @@
 use std::any::Any;
-use std::rc::Rc;
 use piston_window::*;
 
 use crate::math::angle_for_down_vector;

@@ -3,6 +3,9 @@ extern crate piston_window;
 mod dude;
 mod images;
 mod app;
+mod game_object;
+mod moon;
+mod math;
 
 use piston_window::*;
 use piston::event_loop::{EventSettings, Events};
@@ -19,6 +22,7 @@ fn main() {
         WindowSettings::new("Gamey", [SCREEN_SIZE[0], SCREEN_SIZE[1]])
         .exit_on_esc(true)
         .graphics_api(opengl)
+        .resizable(false)
         .build()
         .unwrap();
 
@@ -43,6 +47,10 @@ fn main() {
 
         if let Some(args) = e.update_args() {
             app.update(&args);
+        }
+
+        if let Some(args) = e.resize_args() {
+            app.resize(&mut window, &args);
         }
     }        
 }

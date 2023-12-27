@@ -20,7 +20,9 @@ impl Images {
         let names = [
             "dude_a.png",
             "dude_b.png",
-            "dude_c.png"
+            "dude_c.png",
+            "moon.png",
+            "stars.png",
         ];
 
         let sprites: Result<Vec<_>, _> = names.into_iter().map(|n| {

@@ -48,49 +48,19 @@ pub struct AppContext {
         self.key_state.contains(&button)
     }
  }
-
-pub struct GameObjects {
-    v: Vec<Box<dyn GameObject>>
-}
-
-impl GameObjects {
-    fn dude(&mut self) -> &mut Dude {
-        self.v[0].as_any_mut().downcast_mut::<Dude>().unwrap()
-    }
-
-    //fn moons(&mut self) -> impl Iterator<Item=&mut Moon> {
-    fn moons(&mut self) -> Vec<&mut Moon> {
-        // self.game_objects.iter_mut().map(|obj| {
-        //     let thingy = obj.as_any().downcast_mut::<Moon>();
-        //     thingy.unwrap()
-        // })//.flatten()
-
-        vec![
-            self.v[1].as_any_mut().downcast_mut::<Moon>().unwrap()
-        ]
-    }
-}
-
 pub struct App {
     pub images: Images,
-    game_objects: GameObjects,
+    dude: Box<Dude>,
+    moons: Vec<Box<Moon>>,
     context: AppContext,
 }
 
 impl App {
     pub fn new(images: Images) -> Result<Self, Box<dyn Error>> {        
-        let mut game_objects: Vec<Box<dyn GameObject>> = vec![
-            Box::new(Dude::new()),
-        ];
-
-        let moons = Self::place_moons();
-        for m in moons.into_iter() {
-            game_objects.push(m);
-        }
-
         Ok(Self {
             images: images,
-            game_objects: GameObjects { v: game_objects },
+            dude: Box::new(Dude::new()),
+            moons: Self::place_moons(),
             context: AppContext {
                 global_time: 0.0,
                 game_dt: 0.0,
@@ -111,7 +81,8 @@ impl App {
             Moon::new(605.0, -115.0, 15.0, Some(0.5)),
             Moon::new(25.0, -50.0, 10.0, None),
             Moon::new(200.0, -80.0, 12.0, None),
-            Moon::new(40.0, -120.0, 13.0, None),
+            Moon::new(40.0, -150.0, 13.0, None),
+            Moon::new(50.0, -250.0, 20.0, None),
         ];
 
         moons.into_iter().map(|m| {
@@ -136,7 +107,8 @@ impl App {
                 .trans(0.0, -(self.images.sprites[4].get_size().1 as f64) + SCREEN_SIZE[1]);
             image(&self.images.sprites[4], transform, g);
 
-            for obj in self.game_objects.v.iter() {
+            self.dude.draw(&self, &c, g);
+            for obj in self.moons.iter() {
                 obj.draw(&self, &c, g);
             }
 
@@ -152,37 +124,34 @@ impl App {
             self.context.key_state.remove(&args.button);
         }
 
-        self.game_objects.dude().press(&self.context, &args);
+        self.dude.press(&self.context, &args);
     }
 
     pub fn update(&mut self, args: &UpdateArgs) {
         self.context.global_time += args.dt;
         self.context.game_dt = args.dt * 60.0;       
         self.context.gravity = [ 0.0, 0.0 ];
-        let dude = self.game_objects.dude();
 
-        for m in self.game_objects.moons().iter() {
-            m.attract(dude, &mut self.context.gravity);
+        for m in self.moons.iter() {
+            m.attract(&self.dude, &mut self.context.gravity);
         }
 
         //ground gravity
-        let dist_from_ground = (dude.y - (SCREEN_SIZE[1]-GROUND_Y)).abs() * GRAVITATIONAL_DISTANCE_SCALE;
+        let dist_from_ground = (self.dude.y - (SCREEN_SIZE[1]-GROUND_Y)).abs() * GRAVITATIONAL_DISTANCE_SCALE;
         let atten = (1.0 / (dist_from_ground * dist_from_ground)).clamp(0.0, 1.0);
         self.context.gravity[1] += GRAVITY * atten;
 
-        for obj in self.game_objects.v.iter_mut() {
-            obj.update(&self.context, &args);
-        }
+        self.dude.update(&self.context, &args);
 
-        dude.on_moon = false;
-        for m in self.game_objects.moons().iter() {
-            if m.collide(dude) {
-                dude.on_moon = true;
+        self.dude.on_moon = false;
+        for m in self.moons.iter() {
+            if m.collide(&mut self.dude) {
+                self.dude.on_moon = true;
             }
         }
 
         //vertical scrolling
-        self.context.scroll[1] = dude.y - SCREEN_SIZE[1]/2.0;
+        self.context.scroll[1] = self.dude.y - SCREEN_SIZE[1]/2.0;
         if self.context.scroll[1] > 0.0 {
             self.context.scroll[1] = 0.0;
         } 
